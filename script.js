@@ -14,13 +14,20 @@ window.addEventListener('scroll', () => {
     lastScroll = currentScroll;
 });
 
-// Mobile menu toggle
+// Mobile menu toggle with accessibility
 const mobileMenuBtn = document.getElementById('mobileMenuBtn');
 const mobileMenu = document.getElementById('mobileMenu');
 
 mobileMenuBtn.addEventListener('click', () => {
-    mobileMenuBtn.classList.toggle('active');
+    const isExpanded = mobileMenuBtn.classList.toggle('active');
     mobileMenu.classList.toggle('active');
+    
+    // Update ARIA attributes for accessibility
+    mobileMenuBtn.setAttribute('aria-expanded', isExpanded);
+    mobileMenu.setAttribute('aria-hidden', !isExpanded);
+    
+    // Prevent body scroll when menu is open
+    document.body.style.overflow = isExpanded ? 'hidden' : '';
 });
 
 // Close mobile menu when clicking on a link
@@ -29,7 +36,21 @@ mobileLinks.forEach(link => {
     link.addEventListener('click', () => {
         mobileMenuBtn.classList.remove('active');
         mobileMenu.classList.remove('active');
+        mobileMenuBtn.setAttribute('aria-expanded', 'false');
+        mobileMenu.setAttribute('aria-hidden', 'true');
+        document.body.style.overflow = '';
     });
+});
+
+// Close mobile menu on escape key
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && mobileMenu.classList.contains('active')) {
+        mobileMenuBtn.classList.remove('active');
+        mobileMenu.classList.remove('active');
+        mobileMenuBtn.setAttribute('aria-expanded', 'false');
+        mobileMenu.setAttribute('aria-hidden', 'true');
+        document.body.style.overflow = '';
+    }
 });
 
 // Smooth scrolling for anchor links
@@ -48,7 +69,7 @@ document.querySelectorAll('a[href^="#"]').forEach(anchor => {
     });
 });
 
-// Scroll animations
+// Scroll animations with enhanced options
 const observerOptions = {
     threshold: 0.1,
     rootMargin: '0px 0px -50px 0px'
@@ -58,8 +79,6 @@ const observer = new IntersectionObserver((entries) => {
     entries.forEach(entry => {
         if (entry.isIntersecting) {
             entry.target.classList.add('visible');
-            // Optionally unobserve after animation
-            // observer.unobserve(entry.target);
         }
     });
 }, observerOptions);
@@ -67,6 +86,29 @@ const observer = new IntersectionObserver((entries) => {
 // Observe all elements with animate-on-scroll class
 const animatedElements = document.querySelectorAll('.animate-on-scroll');
 animatedElements.forEach(el => observer.observe(el));
+
+// ===== ACTIVE NAV LINK HIGHLIGHTING =====
+const sections = document.querySelectorAll('section[id]');
+const navLinks = document.querySelectorAll('.nav-link');
+
+window.addEventListener('scroll', () => {
+    let current = '';
+    
+    sections.forEach(section => {
+        const sectionTop = section.offsetTop;
+        
+        if (pageYOffset >= sectionTop - 200) {
+            current = section.getAttribute('id');
+        }
+    });
+    
+    navLinks.forEach(link => {
+        link.classList.remove('active');
+        if (link.getAttribute('href') === `#${current}`) {
+            link.classList.add('active');
+        }
+    });
+});
 
 // Form submission
 const contactForm = document.getElementById('contactForm');
@@ -293,6 +335,157 @@ window.addEventListener('resize', () => {
             mobileMenu.classList.remove('active');
         }
     }, 250);
+});
+
+// ===== CINEMATIC SMOOTH SCROLL =====
+class CinematicScroll {
+    constructor() {
+        this.scrollY = window.pageYOffset;
+        this.targetScrollY = window.pageYOffset;
+        this.ease = 0.08;
+        this.isEnabled = window.innerWidth > 768; // Only enable on desktop
+        
+        if (this.isEnabled) {
+            this.init();
+        }
+    }
+
+    init() {
+        // Disable native smooth scroll when cinematic scroll is active
+        document.documentElement.style.scrollBehavior = 'auto';
+        
+        this.update();
+        this.initScrollTriggers();
+    }
+
+    update() {
+        if (!this.isEnabled) return;
+        
+        this.scrollY += (this.targetScrollY - this.scrollY) * this.ease;
+        
+        // Apply parallax effects
+        this.applyParallax();
+        
+        requestAnimationFrame(() => this.update());
+    }
+
+    applyParallax() {
+        const parallaxElements = document.querySelectorAll('[data-parallax]');
+        
+        parallaxElements.forEach(element => {
+            const speed = parseFloat(element.dataset.parallax) || 0.5;
+            const rect = element.getBoundingClientRect();
+            const scrolled = this.scrollY;
+            
+            // Calculate parallax offset
+            const offsetY = -(scrolled * speed);
+            element.style.transform = `translateY(${offsetY}px)`;
+        });
+    }
+
+    initScrollTriggers() {
+        let scrollTimeout;
+        
+        window.addEventListener('scroll', () => {
+            this.targetScrollY = window.pageYOffset;
+            
+            clearTimeout(scrollTimeout);
+            scrollTimeout = setTimeout(() => {
+                this.scrollY = this.targetScrollY;
+            }, 100);
+        }, { passive: true });
+    }
+}
+
+// Initialize cinematic scroll (desktop only)
+if (window.innerWidth > 768) {
+    const cinematicScroll = new CinematicScroll();
+}
+
+// ===== CINEMATIC PAGE TRANSITIONS =====
+class PageTransition {
+    constructor() {
+        this.overlay = this.createOverlay();
+        this.init();
+    }
+
+    createOverlay() {
+        const overlay = document.createElement('div');
+        overlay.className = 'page-transition-overlay';
+        overlay.innerHTML = `
+            <div class="transition-curtain curtain-left"></div>
+            <div class="transition-curtain curtain-right"></div>
+            <div class="transition-logo">
+                <img src="IMG_0878.JPG" alt="ATAJ Services">
+            </div>
+        `;
+        document.body.appendChild(overlay);
+        return overlay;
+    }
+
+    init() {
+        // Add to existing navigation code
+        document.querySelectorAll('a[href^="#"]').forEach(link => {
+            link.addEventListener('click', (e) => {
+                const target = link.getAttribute('href');
+                if (target && target !== '#') {
+                    e.preventDefault();
+                    this.transitionTo(target);
+                }
+            });
+        });
+    }
+
+    transitionTo(target) {
+        this.overlay.classList.add('active');
+        
+        setTimeout(() => {
+            const element = document.querySelector(target);
+            if (element) {
+                const offsetTop = element.offsetTop - 80;
+                window.scrollTo({
+                    top: offsetTop,
+                    behavior: 'smooth'
+                });
+            }
+        }, 600);
+
+        setTimeout(() => {
+            this.overlay.classList.remove('active');
+        }, 1200);
+    }
+}
+
+// Initialize page transitions
+const pageTransition = new PageTransition();
+
+// ===== STAGGERED SECTION REVEALS =====
+const cinematicObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+        if (entry.isIntersecting) {
+            // Add in-view class to section
+            entry.target.classList.add('in-view');
+            
+            // Stagger child elements
+            const staggerItems = entry.target.querySelectorAll('.stagger-item');
+            staggerItems.forEach((item, index) => {
+                setTimeout(() => {
+                    item.classList.add('revealed');
+                }, index * 100);
+            });
+            
+            // Optionally unobserve after animation
+            cinematicObserver.unobserve(entry.target);
+        }
+    });
+}, {
+    threshold: 0.15,
+    rootMargin: '0px 0px -100px 0px'
+});
+
+// Observe all sections for cinematic reveals
+document.querySelectorAll('section').forEach(section => {
+    cinematicObserver.observe(section);
 });
 
 console.log('ATAJ Services website loaded successfully!');
