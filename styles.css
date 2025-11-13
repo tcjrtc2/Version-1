@@ -1451,6 +1451,23 @@ a {
     font-size: 0.875rem;
 }
 
+/* Testimonials CTA */
+.testimonials-cta {
+    text-align: center;
+    margin-top: 3rem;
+}
+
+.btn-review {
+    position: relative;
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+.btn-review:hover {
+    transform: none;
+    opacity: 0.7;
+}
+
 /* ===== TRUST INDICATORS SECTION ===== */
 .trust-section {
     background: linear-gradient(135deg, var(--color-black) 0%, var(--color-gray-900) 100%);
